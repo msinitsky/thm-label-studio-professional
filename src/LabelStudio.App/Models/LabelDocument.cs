@@ -19,4 +19,6 @@ public sealed class LabelItem
     public double HeightMm { get; set; } = 7;
     public double FontSizePt { get; set; } = 12;
     public bool Bold { get; set; }
+    public double RotationDeg { get; set; }
+    public double StrokeMm { get; set; } = 0.25;
 }

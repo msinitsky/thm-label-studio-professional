@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private int _recordIndex=-1;
     private Point? _dragStart;
     private double _startX, _startY;
+    private double _zoom = 1.0;
     private readonly Dictionary<Guid, FrameworkElement> _visuals=new();
     public MainWindow()
     {
@@ -48,12 +49,16 @@ public partial class MainWindow : Window
         ItemHeight.Text=_selected is null ? "" : F(_selected.HeightMm);
         ItemFontSize.Text=_selected is null ? "" : F(_selected.FontSizePt);
         ItemBold.IsChecked=_selected?.Bold ?? false;
+        ItemRotation.Text=_selected is null ? "" : F(_selected.RotationDeg);
+        ItemStroke.Text=_selected is null ? "" : F(_selected.StrokeMm);
         _updating=false;
     }
     private void Render()
     {
         EditorCanvas.Width=_document.WidthMm*LabelVisualFactory.DipPerMm;
         EditorCanvas.Height=_document.HeightMm*LabelVisualFactory.DipPerMm;
+        EditorCanvas.LayoutTransform=new ScaleTransform(_zoom,_zoom);
+        EditorCanvas.Background=GridCheck?.IsChecked==true ? CreateGridBrush() : Brushes.White;
         EditorCanvas.Children.Clear(); _visuals.Clear();
         foreach(var item in _document.Items)
         {
@@ -91,8 +96,10 @@ public partial class MainWindow : Window
         if (_dragStart is null || _selected is null || e.LeftButton!=MouseButtonState.Pressed)return;
         if(sender is not FrameworkElement f || !_visuals.TryGetValue(_selected.Id,out var current) || !ReferenceEquals(f,current))return;
         var p=e.GetPosition(EditorCanvas);
-        _selected.Xmm=Math.Clamp(_startX+(p.X-_dragStart.Value.X)/LabelVisualFactory.DipPerMm,0,Math.Max(0,_document.WidthMm-_selected.WidthMm));
-        _selected.Ymm=Math.Clamp(_startY+(p.Y-_dragStart.Value.Y)/LabelVisualFactory.DipPerMm,0,Math.Max(0,_document.HeightMm-_selected.HeightMm));
+        var nextX=Math.Clamp(_startX+(p.X-_dragStart.Value.X)/LabelVisualFactory.DipPerMm,0,Math.Max(0,_document.WidthMm-_selected.WidthMm));
+        var nextY=Math.Clamp(_startY+(p.Y-_dragStart.Value.Y)/LabelVisualFactory.DipPerMm,0,Math.Max(0,_document.HeightMm-_selected.HeightMm));
+        _selected.Xmm=SnapCheck.IsChecked==true ? Math.Round(nextX,MidpointRounding.AwayFromZero) : nextX;
+        _selected.Ymm=SnapCheck.IsChecked==true ? Math.Round(nextY,MidpointRounding.AwayFromZero) : nextY;
         Canvas.SetLeft(f,_selected.Xmm*LabelVisualFactory.DipPerMm);
         Canvas.SetTop(f,_selected.Ymm*LabelVisualFactory.DipPerMm);
         _updating=true; ItemX.Text=F(_selected.Xmm); ItemY.Text=F(_selected.Ymm); _updating=false;
@@ -118,6 +125,8 @@ public partial class MainWindow : Window
         if(TryNum(ItemHeight.Text,out var h) && h>0)_selected.HeightMm=Math.Min(h,1000);
         if(TryNum(ItemFontSize.Text,out var font) && font>0)_selected.FontSizePt=Math.Min(font,500);
         _selected.Bold=ItemBold.IsChecked==true;
+        if(TryNum(ItemRotation.Text,out var rotate)) _selected.RotationDeg=Math.Clamp(rotate,-360,360);
+        if(TryNum(ItemStroke.Text,out var stroke) && stroke>0) _selected.StrokeMm=Math.Clamp(stroke,0.1,20);
         Render();
     }
     private void DocumentSettings_LostFocus(object sender,RoutedEventArgs e)
@@ -140,6 +149,73 @@ public partial class MainWindow : Window
     {
         var item=new LabelItem { Kind="Box",Value="Rectangle",WidthMm=15,HeightMm=10 };_document.Items.Add(item);_selected=item;RefreshAll();
     }
+
+    private static Brush CreateGridBrush()
+    {
+        var mm=LabelVisualFactory.DipPerMm;
+        var geometry=new GeometryGroup();
+        geometry.Children.Add(new LineGeometry(new Point(0,0),new Point(mm,0)));
+        geometry.Children.Add(new LineGeometry(new Point(0,0),new Point(0,mm)));
+        var drawing=new GeometryDrawing(null,new Pen(new SolidColorBrush(Color.FromRgb(232,236,241)),0.4),geometry);
+        var brush=new DrawingBrush(drawing) { TileMode=TileMode.Tile, Viewport=new Rect(0,0,mm,mm),ViewportUnits=BrushMappingMode.Absolute,Stretch=Stretch.None };
+        brush.Freeze();return brush;
+    }
+    private void GridChanged_Click(object sender,RoutedEventArgs e)=>Render();
+    private void Zoom_Changed(object sender,SelectionChangedEventArgs e)
+    {
+        if(EditorCanvas is null || ZoomBox.SelectedItem is not ComboBoxItem option) return;
+        var label=option.Content?.ToString()?.TrimEnd('%');
+        if(double.TryParse(label,NumberStyles.Float,CultureInfo.InvariantCulture,out var percent))
+            _zoom=percent/100.0;
+        Render();
+    }
+    private void AddEllipse_Click(object sender,RoutedEventArgs e)
+    {
+        var item=new LabelItem { Kind="Ellipse",Value="Ellipse",WidthMm=15,HeightMm=10 };
+        _document.Items.Add(item);_selected=item;RefreshAll();
+    }
+    private void AddLine_Click(object sender,RoutedEventArgs e)
+    {
+        var item=new LabelItem { Kind="Line",Value="Line",WidthMm=20,HeightMm=3 };
+        _document.Items.Add(item);_selected=item;RefreshAll();
+    }
+    private void Duplicate_Click(object sender,RoutedEventArgs e)
+    {
+        if(_selected is null)return;
+        var copy=new LabelItem
+        {
+            Kind=_selected.Kind,Value=_selected.Value,DataField=_selected.DataField,
+            Xmm=Math.Min(_document.WidthMm-1,_selected.Xmm+2),
+            Ymm=Math.Min(_document.HeightMm-1,_selected.Ymm+2),
+            WidthMm=_selected.WidthMm,HeightMm=_selected.HeightMm,FontSizePt=_selected.FontSizePt,
+            Bold=_selected.Bold,RotationDeg=_selected.RotationDeg,StrokeMm=_selected.StrokeMm
+        };
+        _document.Items.Add(copy);_selected=copy;RefreshAll();
+    }
+    private void Front_Click(object sender,RoutedEventArgs e)
+    {
+        if(_selected is null)return;
+        _document.Items.Remove(_selected);_document.Items.Add(_selected);RefreshAll();
+    }
+    private void Back_Click(object sender,RoutedEventArgs e)
+    {
+        if(_selected is null)return;
+        _document.Items.Remove(_selected);_document.Items.Insert(0,_selected);RefreshAll();
+    }
+    private void Window_PreviewKeyDown(object sender,KeyEventArgs e)
+    {
+        if(e.OriginalSource is TextBox || e.OriginalSource is ComboBox || e.OriginalSource is CheckBox)return;
+        if(e.Key==Key.D && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { Duplicate_Click(sender,e);e.Handled=true;return; }
+        if(e.Key==Key.Delete) { Delete_Click(sender,e);e.Handled=true;return; }
+        if(_selected is null)return;
+        var step=Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)?1:0.25;
+        double dx=0,dy=0;
+        switch(e.Key){ case Key.Left:dx=-step;break;case Key.Right:dx=step;break;case Key.Up:dy=-step;break;case Key.Down:dy=step;break;default:return; }
+        _selected.Xmm=Math.Clamp(_selected.Xmm+dx,0,Math.Max(0,_document.WidthMm-_selected.WidthMm));
+        _selected.Ymm=Math.Clamp(_selected.Ymm+dy,0,Math.Max(0,_document.HeightMm-_selected.HeightMm));
+        RefreshSelected();Render();e.Handled=true;
+    }
+
     private void Delete_Click(object sender,RoutedEventArgs e)
     {
         if(_selected is null)return;
