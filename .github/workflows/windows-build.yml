@@ -1,0 +1,57 @@
+name: Build Windows x64
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Publish Windows portable package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Show SDK environment
+        run: dotnet --info
+      - name: Restore project
+        run: dotnet restore src/LabelStudio.App/LabelStudio.App.csproj -r win-x64
+      - name: Publish portable Windows executable
+        shell: pwsh
+        run: |
+          dotnet publish src/LabelStudio.App/LabelStudio.App.csproj `
+            -c Release -r win-x64 --no-restore --self-contained true `
+            -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None -p:DebugSymbols=false `
+            -o "$env:GITHUB_WORKSPACE\dist\LabelStudioProfessional"
+          if ($LASTEXITCODE -ne 0) { throw "Publish failed ($LASTEXITCODE)" }
+          if (!(Test-Path "$env:GITHUB_WORKSPACE\dist\LabelStudioProfessional\LabelStudio.App.exe")) {
+            throw 'Executable not produced'
+          }
+          Copy-Item sample.csv "$env:GITHUB_WORKSPACE\dist\LabelStudioProfessional\sample.csv"
+          Copy-Item sample.label.json "$env:GITHUB_WORKSPACE\dist\LabelStudioProfessional\sample.label.json"
+          Copy-Item README_RU.md "$env:GITHUB_WORKSPACE\dist\LabelStudioProfessional\README_RU.md"
+      - name: Check Windows EXE file
+        shell: pwsh
+        run: |
+          $exe = 'dist/LabelStudioProfessional/LabelStudio.App.exe'
+          $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $exe))
+          if ($bytes.Length -lt 4096 -or $bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw 'Invalid EXE header' }
+          Write-Output "EXE: $($bytes.Length) bytes; SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
+      - name: Upload portable Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: THM-Label-Studio-Professional-Windows-x64
+          path: dist/LabelStudioProfessional/
+          if-no-files-found: error
+          retention-days: 30

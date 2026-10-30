@@ -1,0 +1,9 @@
+{
+  "Name": "Electrical cabinet sample",
+  "WidthMm": 60,
+  "HeightMm": 30,
+  "Items": [
+    {"Id":"547931d7-5f1a-4fe2-b559-0fb4d5d761a1","Kind":"Text","Value":"QF1","DataField":"Text1","Xmm":5,"Ymm":4,"WidthMm":45,"HeightMm":9,"FontSizePt":20,"Bold":true},
+    {"Id":"6461ba0a-f5ed-43e5-b953-07d47ce3c748","Kind":"Text","Value":"SHR-1","DataField":"Text2","Xmm":5,"Ymm":15,"WidthMm":40,"HeightMm":8,"FontSizePt":12,"Bold":false}
+  ]
+}
