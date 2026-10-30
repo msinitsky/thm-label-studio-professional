@@ -291,6 +291,7 @@ public partial class MainWindow : Window
         var copy=new LabelItem
         {
             Kind=_selected.Kind,Value=_selected.Value,DataField=_selected.DataField,
+            ImageDataBase64=_selected.ImageDataBase64,
             Xmm=Math.Min(_document.WidthMm-1,_selected.Xmm+2),
             Ymm=Math.Min(_document.HeightMm-1,_selected.Ymm+2),
             WidthMm=_selected.WidthMm,HeightMm=_selected.HeightMm,FontSizePt=_selected.FontSizePt,
