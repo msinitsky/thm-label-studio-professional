@@ -372,16 +372,26 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dialog=new OpenFileDialog { Filter="CSV (*.csv;*.txt)|*.csv;*.txt" };
+            var dialog=new OpenFileDialog { Filter="Excel и CSV (*.xlsx;*.csv;*.txt)|*.xlsx;*.csv;*.txt|Excel (*.xlsx)|*.xlsx|CSV (*.csv;*.txt)|*.csv;*.txt" };
             if(dialog.ShowDialog()!=true)return;
-            _records=CsvDataSource.Read(dialog.FileName);_recordIndex=_records.Count>0?0:-1;
-            RefreshAll();StatusText.Text=$"CSV: {_records.Count} rows. Use CSV column in object properties for dynamic text.";
+            _records=System.IO.Path.GetExtension(dialog.FileName).Equals(".xlsx",StringComparison.OrdinalIgnoreCase) ? ExcelDataSource.Read(dialog.FileName) : CsvDataSource.Read(dialog.FileName);_recordIndex=_records.Count>0?0:-1;
+            RefreshAll();StatusText.Text=$"Источник: {System.IO.Path.GetFileName(dialog.FileName)} · {_records.Count} записей. Укажите имена столбцов в свойствах объектов.";
         }
         catch(Exception ex){ ShowError(ex); }
     }
     private void Previous_Click(object sender,RoutedEventArgs e) { if(_recordIndex>0)_recordIndex--;RefreshAll(); }
     private void Next_Click(object sender,RoutedEventArgs e) { if(_recordIndex+1<_records.Count)_recordIndex++;RefreshAll(); }
     private void ClearPreview_Click(object sender,RoutedEventArgs e) { _recordIndex=-1;RefreshAll(); }
+    private void BatchPrint_Click(object sender,RoutedEventArgs e)
+    {
+        if (_records.Count == 0)
+        {
+            MessageBox.Show(this,"Сначала импортируй Excel XLSX или CSV на вкладке «Данные».","Печать партии");
+            return;
+        }
+        new BatchPrintWindow(_document, _records) { Owner = this }.ShowDialog();
+        StatusText.Text="Окно пакетной печати закрыто. Состояние фактической печати проверяйте на устройстве.";
+    }
     private void Print_Click(object sender,RoutedEventArgs e)
     {
         if(MessageBox.Show(this,"This uses the installed Windows printer driver. Verify paper size and printer settings before printing. THM RAW, ZPL, TSPL, JScript, EZPL are NOT active in this build. Continue?","Print confirmation",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
