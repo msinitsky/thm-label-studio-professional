@@ -258,7 +258,7 @@ public partial class MainWindow : Window
     private void Print_Click(object sender,RoutedEventArgs e)
     {
         if(MessageBox.Show(this,"This uses the installed Windows printer driver. Verify paper size and printer settings before printing. THM RAW, ZPL, TSPL, JScript, EZPL are NOT active in this build. Continue?","Print confirmation",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
-        try { var record=_recordIndex>=0?_records[_recordIndex]:null; if(WindowsVisualPrinter.Print(_document,record))StatusText.Text="Print job submitted through Windows driver (physical completion not confirmed)."; }
+        try { var record=_recordIndex>=0?_records[_recordIndex]:null; if(WindowsVisualPrinter.Print(_document,record))StatusText.Text="Задание передано драйверу Windows (физическая печать не подтверждена)."; }
         catch(Exception ex){ ShowError(ex); }
     }
     private void ShowError(Exception ex)=>MessageBox.Show(this,ex.Message,"Error",MessageBoxButton.OK,MessageBoxImage.Error);
