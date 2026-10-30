@@ -79,7 +79,7 @@
    <TabItem Header="Вставка"><StackPanel Orientation="Horizontal" Margin="9,5">
     <StackPanel><WrapPanel><Button Style="{StaticResource RibbonButton}" Content="T&#10;Текст" Click="AddText_Click"/><Button Style="{StaticResource RibbonButton}" Content="▭&#10;Прямоугольник" Click="AddBox_Click"/><Button Style="{StaticResource RibbonButton}" Content="◯&#10;Эллипс" Click="AddEllipse_Click"/><Button Style="{StaticResource RibbonButton}" Content="╱&#10;Линия" Click="AddLine_Click"/></WrapPanel><TextBlock Style="{StaticResource RibbonGroupTitle}" Text="Графические объекты"/></StackPanel>
     <Separator Margin="10,6"/>
-    <StackPanel><WrapPanel><Button Style="{StaticResource RibbonButton}" Content="▥&#10;Штрихкод" IsEnabled="False" ToolTip="Будет реализовано в следующем этапе"/><Button Style="{StaticResource RibbonButton}" Content="▦&#10;QR-код" IsEnabled="False" ToolTip="Будет реализовано в следующем этапе"/><Button Style="{StaticResource RibbonButton}" Content="▧&#10;Изображение" IsEnabled="False" ToolTip="Будет реализовано в следующем этапе"/></WrapPanel><TextBlock Style="{StaticResource RibbonGroupTitle}" Text="Запланированные объекты"/></StackPanel>
+    <StackPanel><WrapPanel><Button Style="{StaticResource RibbonButton}" Content="▥&#10;Code 128" Click="AddCode128_Click" ToolTip="Создать штрихкод Code 128"/><Button Style="{StaticResource RibbonButton}" Content="▦&#10;QR-код" Click="AddQr_Click" ToolTip="Создать QR-код"/><Button Style="{StaticResource RibbonButton}" Content="▧&#10;Изображение" Click="AddImage_Click" ToolTip="Встроить изображение в шаблон"/></WrapPanel><TextBlock Style="{StaticResource RibbonGroupTitle}" Text="Коды и изображения"/></StackPanel>
    </StackPanel></TabItem>
    <TabItem Header="Макет"><StackPanel Orientation="Horizontal" Margin="9,5">
     <StackPanel><WrapPanel><Button Style="{StaticResource RibbonButton}" Content="↑&#10;Вперёд" Click="Front_Click"/><Button Style="{StaticResource RibbonButton}" Content="↓&#10;Назад" Click="Back_Click"/><Button Style="{StaticResource RibbonButton}" Content="⧉&#10;Копия" Click="Duplicate_Click"/></WrapPanel><TextBlock Style="{StaticResource RibbonGroupTitle}" Text="Расположение"/></StackPanel>
@@ -148,7 +148,7 @@
        <TextBlock Text="Выделение и изменение размеров — мышью (синий маркер)." TextWrapping="Wrap" Foreground="#506884" Margin="0,0,0,7"/>
        <StackPanel x:Name="PropertyPanel" IsEnabled="False">
         <TextBlock Text="Содержимое" Style="{StaticResource FieldLabel}"/><TextBox x:Name="ItemValue" TextChanged="Property_Changed"/>
-        <TextBlock Text="Поле CSV (необязательно)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="ItemField" TextChanged="Property_Changed"/>
+        <TextBlock Text="Поле CSV (для текста и штрихкодов)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="ItemField" TextChanged="Property_Changed"/>
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
          <StackPanel Grid.Column="0"><TextBlock Text="X (мм)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="ItemX" LostFocus="Property_Changed"/></StackPanel>
          <StackPanel Grid.Column="2"><TextBlock Text="Y (мм)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="ItemY" LostFocus="Property_Changed"/></StackPanel>

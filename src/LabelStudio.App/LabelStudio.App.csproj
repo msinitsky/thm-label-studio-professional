@@ -8,4 +8,13 @@
     <AssemblyName>LabelStudio.App</AssemblyName>
     <RootNamespace>LabelStudio.App</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ZXing.Net" Version="0.16.10" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ZXing.Net" Version="0.16.10" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ZXing.Net" Version="0.16.10" />
+  </ItemGroup>
 </Project>

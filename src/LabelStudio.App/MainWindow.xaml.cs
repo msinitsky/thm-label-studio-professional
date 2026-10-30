@@ -227,6 +227,30 @@ public partial class MainWindow : Window
     {
         var item=new LabelItem { Value="New text" };_document.Items.Add(item);_selected=item;RefreshAll();
     }
+    private void AddQr_Click(object sender, RoutedEventArgs e)
+    {
+        var item = new LabelItem { Kind="QR", Value="SEI-2026", Xmm=33,Ymm=4,WidthMm=17,HeightMm=17 };
+        _document.Items.Add(item); _selected=item; RefreshAll();
+    }
+    private void AddCode128_Click(object sender, RoutedEventArgs e)
+    {
+        var item = new LabelItem { Kind="Code128",Value="SEI-2026",Xmm=5,Ymm=19,WidthMm=45,HeightMm=8 };
+        _document.Items.Add(item); _selected=item; RefreshAll();
+    }
+    private void AddImage_Click(object sender, RoutedEventArgs e)
+    {
+        var picker=new OpenFileDialog { Title="Выбрать изображение",Filter="Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif|Все файлы|*.*" };
+        if(picker.ShowDialog(this)!=true)return;
+        try
+        {
+            var file=new System.IO.FileInfo(picker.FileName);
+            if(file.Length>10*1024*1024) { MessageBox.Show(this,"Размер изображения должен быть не более 10 МБ.");return; }
+            var item=new LabelItem { Kind="Image",Value=file.Name,Xmm=10,Ymm=7,WidthMm=20,HeightMm=15,
+                ImageDataBase64=Convert.ToBase64String(System.IO.File.ReadAllBytes(picker.FileName)) };
+            _document.Items.Add(item);_selected=item;RefreshAll();
+        }
+        catch(Exception ex) { ShowError(ex); }
+    }
     private void AddBox_Click(object sender,RoutedEventArgs e)
     {
         var item=new LabelItem { Kind="Box",Value="Rectangle",WidthMm=15,HeightMm=10 };_document.Items.Add(item);_selected=item;RefreshAll();
