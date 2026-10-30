@@ -23,7 +23,7 @@ public static class LabelVisualFactory
             visual = new Ellipse { Width=item.WidthMm*DipPerMm, Height=item.HeightMm*DipPerMm, Stroke=Brushes.Black, StrokeThickness=Math.Max(0.2,item.StrokeMm)*DipPerMm };
         else if (item.Kind == "Line")
             visual = new Line { X1=0,Y1=0,X2=item.WidthMm*DipPerMm,Y2=item.HeightMm*DipPerMm, Stroke=Brushes.Black, StrokeThickness=Math.Max(0.2,item.StrokeMm)*DipPerMm, Width=item.WidthMm*DipPerMm, Height=item.HeightMm*DipPerMm };
-        else if (item.Kind == "QR" || item.Kind == "Code128")
+        else if (item.Kind == "QR" || item.Kind == "Code128" || item.Kind == "DataMatrix")
         {
             visual = MakeBarcodeVisual(item, value);
         }
@@ -35,8 +35,11 @@ public static class LabelVisualFactory
         {
         visual = new TextBlock
         {
-            Text=value, FontFamily=new FontFamily("Arial"), FontSize=item.FontSizePt*96.0/72.0,
+            Text=value, FontFamily=new FontFamily(string.IsNullOrWhiteSpace(item.FontFamilyName) ? "Arial" : item.FontFamilyName), FontSize=item.FontSizePt*96.0/72.0,
             FontWeight=item.Bold ? FontWeights.Bold : FontWeights.Normal,
+            FontStyle=item.Italic ? FontStyles.Italic : FontStyles.Normal,
+            TextDecorations=item.Underline ? TextDecorations.Underline : null,
+            TextAlignment=item.TextAlignment == "Center" ? System.Windows.TextAlignment.Center : item.TextAlignment == "Right" ? System.Windows.TextAlignment.Right : System.Windows.TextAlignment.Left,
             Foreground=Brushes.Black, TextWrapping=TextWrapping.Wrap,
             Width=item.WidthMm*DipPerMm, Height=item.HeightMm*DipPerMm,
             ClipToBounds=true
@@ -54,15 +57,18 @@ public static class LabelVisualFactory
         try
         {
             bool qr = item.Kind == "QR";
+            bool matrix = item.Kind == "DataMatrix";
             // Generate at printer-like raster resolution; keep QR square and provide a quiet zone.
             int pixelsW = Math.Clamp((int)Math.Round(item.WidthMm * 12), 90, 4096);
             int pixelsH = Math.Clamp((int)Math.Round(item.HeightMm * 12), 60, 4096);
-            if (qr) pixelsW = pixelsH = Math.Max(pixelsW,pixelsH);
+            if (qr || matrix) pixelsW = pixelsH = Math.Max(pixelsW,pixelsH);
             var writer = new ZXing.BarcodeWriterPixelData
             {
-                Format = qr ? BarcodeFormat.QR_CODE : BarcodeFormat.CODE_128,
+                Format = qr ? BarcodeFormat.QR_CODE : matrix ? BarcodeFormat.DATA_MATRIX : BarcodeFormat.CODE_128,
                 Options = qr
                     ? new QrCodeEncodingOptions { Width=pixelsW, Height=pixelsH, Margin=4, CharacterSet="UTF-8" }
+                    : matrix
+                    ? new EncodingOptions { Width=pixelsW, Height=pixelsH, Margin=2, PureBarcode=true }
                     : new EncodingOptions { Width=pixelsW, Height=pixelsH, Margin=8, PureBarcode=true }
             };
             var image = writer.Write(value);

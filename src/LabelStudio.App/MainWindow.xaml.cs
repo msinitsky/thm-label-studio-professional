@@ -53,6 +53,11 @@ public partial class MainWindow : Window
         ItemHeight.Text=_selected is null ? "" : F(_selected.HeightMm);
         ItemFontSize.Text=_selected is null ? "" : F(_selected.FontSizePt);
         ItemBold.IsChecked=_selected?.Bold ?? false;
+        ItemItalic.IsChecked=_selected?.Italic ?? false;
+        ItemUnderline.IsChecked=_selected?.Underline ?? false;
+        ItemFontFamily.Text=_selected?.FontFamilyName ?? "Arial";
+        var align=_selected?.TextAlignment ?? "Left";
+        ItemTextAlignment.SelectedItem=ItemTextAlignment.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string?)i.Tag == align);
         ItemRotation.Text=_selected is null ? "" : F(_selected.RotationDeg);
         ItemStroke.Text=_selected is null ? "" : F(_selected.StrokeMm);
         _updating=false;
@@ -207,6 +212,10 @@ public partial class MainWindow : Window
         if(TryNum(ItemHeight.Text,out var h) && h>0)_selected.HeightMm=Math.Min(h,1000);
         if(TryNum(ItemFontSize.Text,out var font) && font>0)_selected.FontSizePt=Math.Min(font,500);
         _selected.Bold=ItemBold.IsChecked==true;
+        _selected.Italic=ItemItalic.IsChecked==true;
+        _selected.Underline=ItemUnderline.IsChecked==true;
+        _selected.FontFamilyName=string.IsNullOrWhiteSpace(ItemFontFamily.Text) ? "Arial" : ItemFontFamily.Text.Trim();
+        _selected.TextAlignment=(ItemTextAlignment.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Left";
         if(TryNum(ItemRotation.Text,out var rotate)) _selected.RotationDeg=Math.Clamp(rotate,-360,360);
         if(TryNum(ItemStroke.Text,out var stroke) && stroke>0) _selected.StrokeMm=Math.Clamp(stroke,0.1,20);
         Render();
@@ -232,6 +241,14 @@ public partial class MainWindow : Window
         var item = new LabelItem { Kind="QR", Value="SEI-2026", Xmm=33,Ymm=4,WidthMm=17,HeightMm=17 };
         _document.Items.Add(item); _selected=item; RefreshAll();
     }
+    private void AddDataMatrix_Click(object sender, RoutedEventArgs e)
+    {
+        var item = new LabelItem { Kind="DataMatrix",Value="SEI-2026",Xmm=33,Ymm=8,WidthMm=15,HeightMm=15 };
+        _document.Items.Add(item); _selected=item; RefreshAll();
+    }
+    private void ToggleBold_Click(object sender,RoutedEventArgs e) { if(_selected?.Kind!="Text")return;_selected.Bold=!_selected.Bold;RefreshSelected();Render(); }
+    private void ToggleItalic_Click(object sender,RoutedEventArgs e) { if(_selected?.Kind!="Text")return;_selected.Italic=!_selected.Italic;RefreshSelected();Render(); }
+    private void ToggleUnderline_Click(object sender,RoutedEventArgs e) { if(_selected?.Kind!="Text")return;_selected.Underline=!_selected.Underline;RefreshSelected();Render(); }
     private void AddCode128_Click(object sender, RoutedEventArgs e)
     {
         var item = new LabelItem { Kind="Code128",Value="SEI-2026",Xmm=5,Ymm=19,WidthMm=45,HeightMm=8 };
@@ -295,7 +312,8 @@ public partial class MainWindow : Window
             Xmm=Math.Min(_document.WidthMm-1,_selected.Xmm+2),
             Ymm=Math.Min(_document.HeightMm-1,_selected.Ymm+2),
             WidthMm=_selected.WidthMm,HeightMm=_selected.HeightMm,FontSizePt=_selected.FontSizePt,
-            Bold=_selected.Bold,RotationDeg=_selected.RotationDeg,StrokeMm=_selected.StrokeMm
+            Bold=_selected.Bold,Italic=_selected.Italic,Underline=_selected.Underline,
+            FontFamilyName=_selected.FontFamilyName,TextAlignment=_selected.TextAlignment,RotationDeg=_selected.RotationDeg,StrokeMm=_selected.StrokeMm
         };
         _document.Items.Add(copy);_selected=copy;RefreshAll();
     }
