@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Controls.Primitives;
 using LabelStudio.App.Models;
 using LabelStudio.App.Services;
 using LabelStudio.App.Printing;
@@ -19,6 +20,8 @@ public partial class MainWindow : Window
     private Point? _dragStart;
     private double _startX, _startY;
     private double _zoom = 1.0;
+    private Thumb? _resizeThumb;
+    private double _resizeStartW, _resizeStartH;
     private readonly Dictionary<Guid, FrameworkElement> _visuals=new();
     public MainWindow()
     {
@@ -42,6 +45,7 @@ public partial class MainWindow : Window
     {
         _updating=true;
         PropertyPanel.IsEnabled=_selected is not null;
+        if(ObjectFormatTab is not null) ObjectFormatTab.IsEnabled=_selected is not null;
         ItemValue.Text=_selected?.Value ?? ""; ItemField.Text=_selected?.DataField ?? "";
         ItemX.Text=_selected is null ? "" : F(_selected.Xmm);
         ItemY.Text=_selected is null ? "" : F(_selected.Ymm);
@@ -77,7 +81,84 @@ public partial class MainWindow : Window
             Canvas.SetTop(element,item.Ymm*LabelVisualFactory.DipPerMm);
             EditorCanvas.Children.Add(element); _visuals[item.Id]=element;
         }
+        // The resize grip is editor-only: it is never serialized or printed.
+        if (_selected is not null)
+        {
+            _resizeThumb = new Thumb
+            {
+                Width = 9, Height = 9,
+                Background = Brushes.DodgerBlue,
+                BorderBrush = Brushes.White, BorderThickness = new Thickness(1),
+                Cursor = Cursors.SizeNWSE,
+                ToolTip = "Изменить ширину и высоту объекта"
+            };
+            _resizeThumb.DragStarted += Resize_DragStarted;
+            _resizeThumb.DragDelta += Resize_DragDelta;
+            _resizeThumb.DragCompleted += Resize_DragCompleted;
+            PositionResizeThumb();
+            Panel.SetZIndex(_resizeThumb, 1000);
+            EditorCanvas.Children.Add(_resizeThumb);
+        }
+        else _resizeThumb = null;
     }
+    private void PositionResizeThumb()
+    {
+        if (_selected is null || _resizeThumb is null) return;
+        var scale = LabelVisualFactory.DipPerMm;
+        Canvas.SetLeft(_resizeThumb, (_selected.Xmm + _selected.WidthMm) * scale - 4.5);
+        Canvas.SetTop(_resizeThumb, (_selected.Ymm + _selected.HeightMm) * scale - 4.5);
+    }
+    private void Resize_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        if (_selected is null) return;
+        _resizeStartW = _selected.WidthMm;
+        _resizeStartH = _selected.HeightMm;
+        _dragStart = null;
+    }
+    private void Resize_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (_selected is null) return;
+        var d = LabelVisualFactory.DipPerMm;
+        double maxW = Math.Max(0.5, _document.WidthMm - _selected.Xmm);
+        double maxH = Math.Max(0.5, _document.HeightMm - _selected.Ymm);
+        double w = Math.Clamp(_selected.WidthMm + e.HorizontalChange / d, 0.5, maxW);
+        double h = Math.Clamp(_selected.HeightMm + e.VerticalChange / d, 0.5, maxH);
+        if (SnapCheck.IsChecked == true) { w = Math.Clamp(Math.Round(w), 0.5, maxW); h = Math.Clamp(Math.Round(h), 0.5, maxH); }
+        _selected.WidthMm = w;
+        _selected.HeightMm = h;
+        if (_visuals.TryGetValue(_selected.Id, out var itemVisual))
+        {
+            itemVisual.Width = w*d;
+            itemVisual.Height = h*d;
+        }
+        PositionResizeThumb();
+        _updating = true;
+        ItemWidth.Text = F(w); ItemHeight.Text = F(h);
+        _updating = false;
+    }
+    private void Resize_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        Render();
+        StatusText.Text = _selected is null ? "Готово" : $"Размер объекта: {F(_selected.WidthMm)} × {F(_selected.HeightMm)} мм";
+    }
+    private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!ReferenceEquals(e.OriginalSource, EditorCanvas)) return;
+        _selected = null; ObjectList.SelectedItem = null; RefreshSelected(); Render();
+    }
+    private void AlignItem(double? x, double? y)
+    {
+        if (_selected is null) return;
+        if (x.HasValue) _selected.Xmm = Math.Max(0, x.Value);
+        if (y.HasValue) _selected.Ymm = Math.Max(0, y.Value);
+        RefreshSelected(); Render();
+    }
+    private void AlignLeft_Click(object sender, RoutedEventArgs e) => AlignItem(0, null);
+    private void AlignCenter_Click(object sender, RoutedEventArgs e) { if (_selected is not null) AlignItem((_document.WidthMm - _selected.WidthMm) / 2, null); }
+    private void AlignRight_Click(object sender, RoutedEventArgs e) { if (_selected is not null) AlignItem(_document.WidthMm - _selected.WidthMm, null); }
+    private void AlignTop_Click(object sender, RoutedEventArgs e) => AlignItem(null, 0);
+    private void AlignMiddle_Click(object sender, RoutedEventArgs e) { if (_selected is not null) AlignItem(null, (_document.HeightMm - _selected.HeightMm) / 2); }
+    private void AlignBottom_Click(object sender, RoutedEventArgs e) { if (_selected is not null) AlignItem(null, _document.HeightMm - _selected.HeightMm); }
     private void Object_MouseDown(object sender,MouseButtonEventArgs e)
     {
         if(sender is not FrameworkElement f || f.Tag is not Guid id) return;
@@ -102,6 +183,7 @@ public partial class MainWindow : Window
         _selected.Ymm=SnapCheck.IsChecked==true ? Math.Round(nextY,MidpointRounding.AwayFromZero) : nextY;
         Canvas.SetLeft(f,_selected.Xmm*LabelVisualFactory.DipPerMm);
         Canvas.SetTop(f,_selected.Ymm*LabelVisualFactory.DipPerMm);
+        PositionResizeThumb();
         _updating=true; ItemX.Text=F(_selected.Xmm); ItemY.Text=F(_selected.Ymm); _updating=false;
     }
     private void Object_MouseUp(object sender,MouseButtonEventArgs e)
@@ -205,6 +287,8 @@ public partial class MainWindow : Window
     private void Window_PreviewKeyDown(object sender,KeyEventArgs e)
     {
         if(e.OriginalSource is TextBox || e.OriginalSource is ComboBox || e.OriginalSource is CheckBox)return;
+        if(e.Key==Key.S && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { Save_Click(sender,e);e.Handled=true;return; }
+        if(e.Key==Key.O && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { Open_Click(sender,e);e.Handled=true;return; }
         if(e.Key==Key.D && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { Duplicate_Click(sender,e);e.Handled=true;return; }
         if(e.Key==Key.Delete) { Delete_Click(sender,e);e.Handled=true;return; }
         if(_selected is null)return;
